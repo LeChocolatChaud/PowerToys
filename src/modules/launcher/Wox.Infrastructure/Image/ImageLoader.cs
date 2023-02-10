@@ -50,7 +50,12 @@ namespace Wox.Infrastructure.Image
 
             foreach (var icon in new[] { Constant.DefaultIcon, Constant.ErrorIcon, Constant.LightThemedDefaultIcon, Constant.LightThemedErrorIcon })
             {
-                ImageSource img = new BitmapImage(new Uri(icon));
+                BitmapImage bmi = new BitmapImage();
+                bmi.BeginInit();
+                bmi.UriSource = new Uri(icon);
+                bmi.CacheOption = BitmapCacheOption.OnLoad;
+                bmi.EndInit();
+                ImageSource img = bmi;
                 img.Freeze();
                 ImageCache[icon] = img;
             }
@@ -175,10 +180,17 @@ namespace Wox.Infrastructure.Image
                             image = WindowsThumbnailProvider.GetThumbnail(path, Constant.ThumbnailSize, Constant.ThumbnailSize, ThumbnailOptions.ThumbnailOnly);
                         }
                     }
+                    else if (extension == ".pdf" && WindowsThumbnailProvider.DoesPdfUseAcrobatAsProvider())
+                    {
+                        // The PDF thumbnail provider from Adobe Reader and Acrobat Pro lets crash PT Run with an Dispatcher exception. (https://github.com/microsoft/PowerToys/issues/18166)
+                        // To not run into the crash, we only request the icon of PDF files if the PDF thumbnail handler is set to Adobe Reader/Acrobat Pro.
+                        type = ImageType.File;
+                        image = WindowsThumbnailProvider.GetThumbnail(path, Constant.ThumbnailSize, Constant.ThumbnailSize, ThumbnailOptions.IconOnly);
+                    }
                     else
                     {
                         type = ImageType.File;
-                        image = WindowsThumbnailProvider.GetThumbnail(path, Constant.ThumbnailSize, Constant.ThumbnailSize, ThumbnailOptions.None);
+                        image = WindowsThumbnailProvider.GetThumbnail(path, Constant.ThumbnailSize, Constant.ThumbnailSize, ThumbnailOptions.RESIZETOFIT);
                     }
                 }
                 else

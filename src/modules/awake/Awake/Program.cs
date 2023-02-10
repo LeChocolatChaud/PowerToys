@@ -30,7 +30,7 @@ using Windows.Win32.System.Power;
 
 namespace Awake
 {
-    internal class Program
+    internal sealed class Program
     {
         // PowerToys Awake build code name. Used for exact logging
         // that does not map to PowerToys broad version schema to pinpoint
@@ -43,6 +43,8 @@ namespace Awake
         private static Mutex? _mutex;
         private static FileSystemWatcher? _watcher;
         private static SettingsUtils? _settingsUtils;
+
+        private static bool _startedFromPowerToys;
 
         public static Mutex LockMutex { get => _mutex; set => _mutex = value; }
 
@@ -60,6 +62,12 @@ namespace Awake
             // Log initialization needs to always happen before we test whether
             // only one instance of Awake is running.
             _log = LogManager.GetCurrentClassLogger();
+
+            if (PowerToys.GPOWrapper.GPOWrapper.GetConfiguredAwakeEnabledValue() == PowerToys.GPOWrapper.GpoRuleConfigured.Disabled)
+            {
+                Exit("Tried to start with a GPO policy setting the utility to always be disabled. Please contact your systems administrator.", 1, _exitSignal, true);
+                return 0;
+            }
 
             LockMutex = new Mutex(true, InternalConstants.AppName, out bool instantiated);
 
@@ -182,6 +190,10 @@ namespace Awake
                 _log.Info("No PID specified. Allocating console...");
                 APIHelper.AllocateConsole();
             }
+            else
+            {
+                _startedFromPowerToys = true;
+            }
 
             _log.Info($"The value for --use-pt-config is: {usePtConfig}");
             _log.Info($"The value for --display-on is: {displayOn}");
@@ -232,7 +244,7 @@ namespace Awake
                         .Select(e => e.EventArgs)
                         .Subscribe(HandleAwakeConfigChange);
 
-                    TrayHelper.SetTray(InternalConstants.FullAppName, new AwakeSettings());
+                    TrayHelper.SetTray(InternalConstants.FullAppName, new AwakeSettings(), _startedFromPowerToys);
 
                     // Initially the file might not be updated, so we need to start processing
                     // settings right away.
@@ -324,7 +336,7 @@ namespace Awake
                             }
                     }
 
-                    TrayHelper.SetTray(InternalConstants.FullAppName, settings);
+                    TrayHelper.SetTray(InternalConstants.FullAppName, settings, _startedFromPowerToys);
                 }
                 else
                 {

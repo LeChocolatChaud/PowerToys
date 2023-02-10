@@ -19,6 +19,7 @@
 #include "RegistryUtils.h"
 #include "EventViewer.h"
 #include "InstallationFolder.h"
+#include "ReportGPOValues.h"
 
 using namespace std;
 using namespace std::filesystem;
@@ -159,13 +160,13 @@ void ReportWindowsVersion(const filesystem::path& tmpDir)
 {
     auto versionReportPath = tmpDir;
     versionReportPath = versionReportPath.append("windows-version.txt");
-    OSVERSIONINFOEXW osInfo;
+    OSVERSIONINFOEXW osInfo{};
 
     try
     {
         NTSTATUS(WINAPI * RtlGetVersion)
         (LPOSVERSIONINFOEXW) = nullptr;
-        *(FARPROC*)&RtlGetVersion = GetProcAddress(GetModuleHandleA("ntdll"), "RtlGetVersion");
+        *reinterpret_cast<FARPROC*>(& RtlGetVersion) = GetProcAddress(GetModuleHandleA("ntdll"), "RtlGetVersion");
         if (RtlGetVersion)
         {
             osInfo.dwOSVersionInfoSize = sizeof(osInfo);
@@ -354,6 +355,9 @@ int wmain(int argc, wchar_t* argv[], wchar_t*)
 
     // Write registry to the temporary folder
     ReportRegistry(reportDir);
+
+    // Write gpo policies to the temporary folder
+    ReportGPOValues(reportDir);
 
     // Write compatibility tab info to the temporary folder
     ReportCompatibilityTab(reportDir);

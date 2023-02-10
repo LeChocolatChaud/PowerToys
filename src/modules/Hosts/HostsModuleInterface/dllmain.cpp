@@ -14,7 +14,7 @@
 
 extern "C" IMAGE_DOS_HEADER __ImageBase;
 
-BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved)
+BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD ul_reason_for_call, LPVOID /*lpReserved*/)
 {
     switch (ul_reason_for_call)
     {
@@ -57,7 +57,7 @@ private:
     void bring_process_to_front()
     {
         auto enum_windows = [](HWND hwnd, LPARAM param) -> BOOL {
-            HANDLE process_handle = (HANDLE)param;
+            HANDLE process_handle = reinterpret_cast<HANDLE>(param);
             DWORD window_process_id = 0;
 
             GetWindowThreadProcessId(hwnd, &window_process_id);
@@ -135,7 +135,13 @@ public:
         return app_key.c_str();
     }
 
-    virtual bool get_config(wchar_t* buffer, int* buffer_size) override
+    // Return the configured status for the gpo policy for the module
+    virtual powertoys_gpo::gpo_rule_configured_t gpo_policy_enabled_configuration() override
+    {
+        return powertoys_gpo::getConfiguredHostsFileEditorEnabledValue();
+    }
+
+    virtual bool get_config(wchar_t* /*buffer*/, int* /*buffer_size*/) override
     {
         return false;
     }
@@ -159,6 +165,7 @@ public:
             {
                 launch_process(true);
             }
+            Trace::ActivateEditor();
         }
         catch (std::exception&)
         {
@@ -166,7 +173,7 @@ public:
         }
     }
 
-    virtual void set_config(const wchar_t* config) override
+    virtual void set_config(const wchar_t* /*config*/) override
     {
     }
 
@@ -179,6 +186,7 @@ public:
     {
         Logger::trace("HostsModuleInterface::enable()");
         m_enabled = true;
+        Trace::EnableHostsFileEditor(true);
     };
 
     virtual void disable()
@@ -190,6 +198,7 @@ public:
         }
 
         m_enabled = false;
+        Trace::EnableHostsFileEditor(false);
     }
 };
 

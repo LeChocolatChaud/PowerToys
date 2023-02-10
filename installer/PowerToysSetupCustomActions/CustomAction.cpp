@@ -15,6 +15,8 @@
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Management.Deployment.h>
 
+#include "DepsFilesLists.h"
+
 using namespace std;
 
 HINSTANCE DLL_HANDLE = nullptr;
@@ -31,56 +33,6 @@ const DWORD USERNAME_LEN = UNLEN + 1; // User Name + '\0'
 
 static const wchar_t* POWERTOYS_EXE_COMPONENT = L"{A2C66D91-3485-4D00-B04D-91844E6B345B}";
 static const wchar_t* POWERTOYS_UPGRADE_CODE = L"{42B84BF7-5FBF-473B-9C8B-049DC16F7708}";
-
-const std::vector<std::wstring> winAppSdkFiles = {
-    L"CoreMessagingXP.dll",
-    L"DWriteCore.dll",
-    L"DwmSceneI.dll",
-    L"MRM.dll",
-    L"Microsoft.DirectManipulation.dll",
-    L"Microsoft.InputStateManager.dll",
-    L"Microsoft.Internal.FrameworkUdk.dll",
-    L"Microsoft.UI.Composition.OSSupport.dll",
-    L"Microsoft.UI.Input.dll",
-    L"Microsoft.UI.Windowing.Core.dll",
-    L"Microsoft.UI.Xaml.Controls.dll",
-    L"Microsoft.UI.Xaml.Controls.pri",
-    L"Microsoft.UI.Xaml.Internal.dll",
-    L"Microsoft.UI.Xaml.Phone.dll",
-    L"Microsoft.Web.WebView2.Core.dll",
-    L"Microsoft.Windows.AppNotifications.Projection.dll",
-    L"Microsoft.Windows.ApplicationModel.Resources.dll",
-    L"Microsoft.WindowsAppRuntime.Bootstrap.dll",
-    L"Microsoft.Windows.PushNotifications.Projection.dll",
-    L"Microsoft.Windows.System.Projection.dll",
-    L"Microsoft.WindowsAppRuntime.Insights.Resource.dll",
-    L"Microsoft.WindowsAppRuntime.Release.Net.dll",
-    L"Microsoft.WindowsAppRuntime.dll",
-    L"Microsoft.ui.xaml.dll",
-    L"Microsoft.ui.xaml.resources.19h1.dll",
-    L"Microsoft.ui.xaml.resources.common.dll",
-    L"PushNotificationsLongRunningTask.ProxyStub.dll",
-    L"WinUIEdit.dll",
-    L"WindowsAppRuntime.png",
-    L"WindowsAppSdk.AppxDeploymentExtensions.Desktop.dll",
-    L"dcompi.dll",
-    L"dwmcorei.dll",
-    L"marshal.dll",
-    L"wuceffectsi.dll" };
-
-const std::vector<std::wstring> powerToysInteropFiles = {
-    L"concrt140.dll",
-    L"msvcp140.dll",
-    L"msvcp140_1.dll",
-    L"msvcp140_2.dll",
-    L"msvcp140_atomic_wait.dll",
-    L"msvcp140_codecvt_ids.dll",
-    L"PowerToys.Interop.dll",
-    L"vcamp140.dll",
-    L"vccorlib140.dll",
-    L"vcomp140.dll",
-    L"vcruntime140.dll",
-    L"vcruntime140_1.dll" };
 
 struct WcaSink : spdlog::sinks::base_sink<std::mutex>
 {
@@ -504,7 +456,7 @@ LExit:
     {
         PMSIHANDLE hRecord = MsiCreateRecord(0);
         MsiRecordSetString(hRecord, 0, TEXT("Failed to create a scheduled task to start PowerToys at user login. You can re-try to create the scheduled task using the PowerToys settings."));
-        MsiProcessMessage(hInstall, INSTALLMESSAGE(INSTALLMESSAGE_WARNING + MB_OK), hRecord);
+        MsiProcessMessage(hInstall, static_cast<INSTALLMESSAGE>(INSTALLMESSAGE_WARNING + MB_OK), hRecord);
     }
 
     er = SUCCEEDED(hr) ? ERROR_SUCCESS : ERROR_INSTALL_FAILURE;
@@ -621,7 +573,7 @@ LExit:
     {
         PMSIHANDLE hRecord = MsiCreateRecord(0);
         MsiRecordSetString(hRecord, 0, TEXT("Failed to remove the PowerToys folder from the scheduled task. These can be removed manually later."));
-        MsiProcessMessage(hInstall, INSTALLMESSAGE(INSTALLMESSAGE_WARNING + MB_OK), hRecord);
+        MsiProcessMessage(hInstall, static_cast<INSTALLMESSAGE>(INSTALLMESSAGE_WARNING + MB_OK), hRecord);
     }
 
     er = SUCCEEDED(hr) ? ERROR_SUCCESS : ERROR_INSTALL_FAILURE;
@@ -894,7 +846,7 @@ LExit:
     {
         PMSIHANDLE hRecord = MsiCreateRecord(0);
         MsiRecordSetString(hRecord, 0, TEXT("Failed to add certificate to store"));
-        MsiProcessMessage(hInstall, INSTALLMESSAGE(INSTALLMESSAGE_WARNING + MB_OK), hRecord);
+        MsiProcessMessage(hInstall, static_cast<INSTALLMESSAGE>(INSTALLMESSAGE_WARNING + MB_OK), hRecord);
     }
 
     er = SUCCEEDED(hr) ? ERROR_SUCCESS : ERROR_INSTALL_FAILURE;
@@ -926,7 +878,7 @@ LExit:
     {
         PMSIHANDLE hRecord = MsiCreateRecord(0);
         MsiRecordSetString(hRecord, 0, TEXT("Failed to install virtual camera driver"));
-        MsiProcessMessage(hInstall, INSTALLMESSAGE(INSTALLMESSAGE_WARNING + MB_OK), hRecord);
+        MsiProcessMessage(hInstall, static_cast<INSTALLMESSAGE>(INSTALLMESSAGE_WARNING + MB_OK), hRecord);
     }
 
     er = SUCCEEDED(hr) ? ERROR_SUCCESS : ERROR_INSTALL_FAILURE;
@@ -967,7 +919,7 @@ LExit:
     {
         PMSIHANDLE hRecord = MsiCreateRecord(0);
         MsiRecordSetString(hRecord, 0, TEXT("Failed to uninstall virtual camera driver"));
-        MsiProcessMessage(hInstall, INSTALLMESSAGE(INSTALLMESSAGE_WARNING + MB_OK), hRecord);
+        MsiProcessMessage(hInstall, static_cast<INSTALLMESSAGE>(INSTALLMESSAGE_WARNING + MB_OK), hRecord);
     }
 
     er = SUCCEEDED(hr) ? ERROR_SUCCESS : ERROR_INSTALL_FAILURE;
@@ -1045,11 +997,20 @@ UINT __stdcall UnRegisterContextMenuPackagesCA(MSIHANDLE hInstall)
     return WcaFinalize(er);
 }
 
+const std::wstring WinAppSDKConsumers[] =
+{
+    L"Settings",
+    L"modules\\PowerRename",
+    L"modules\\MeasureTool",
+    L"modules\\FileLocksmith",
+    L"modules\\Hosts",
+};
+
 UINT __stdcall CreateWinAppSDKHardlinksCA(MSIHANDLE hInstall)
 {
     HRESULT hr = S_OK;
     UINT er = ERROR_SUCCESS;
-    std::wstring installationFolder, winAppSDKFilesSrcDir, settingsDir, powerRenameDir, measureToolDir, hostsFileEditorDir;
+    std::wstring installationFolder, winAppSDKFilesSrcDir;
 
     hr = WcaInitialize(hInstall, "CreateWinAppSDKHardlinksCA");
     ExitOnFailure(hr, "Failed to initialize");
@@ -1058,25 +1019,21 @@ UINT __stdcall CreateWinAppSDKHardlinksCA(MSIHANDLE hInstall)
     ExitOnFailure(hr, "Failed to get installation folder");
 
     winAppSDKFilesSrcDir = installationFolder + L"dll\\WinAppSDK\\";
-    hostsFileEditorDir = installationFolder + L"modules\\Hosts\\";
-    settingsDir = installationFolder + L"Settings\\";
-    powerRenameDir = installationFolder + L"modules\\PowerRename\\";
-    measureToolDir = installationFolder + L"modules\\MeasureTool\\";
 
     for (auto file : winAppSdkFiles)
     {
-        std::error_code ec;
-        std::filesystem::create_hard_link((winAppSDKFilesSrcDir + file).c_str(), (hostsFileEditorDir + file).c_str(), ec);
-        std::filesystem::create_hard_link((winAppSDKFilesSrcDir + file).c_str(), (settingsDir + file).c_str(), ec);
-        std::filesystem::create_hard_link((winAppSDKFilesSrcDir + file).c_str(), (powerRenameDir + file).c_str(), ec);
-        std::filesystem::create_hard_link((winAppSDKFilesSrcDir + file).c_str(), (measureToolDir + file).c_str(), ec);
-
-        if (ec.value() != S_OK)
+        for (auto consumer : WinAppSDKConsumers)
         {
-            std::wstring errorMessage{ L"Error creating hard link for: " };
-            errorMessage += file;
-            errorMessage += L", error code: " + std::to_wstring(ec.value());
-            Logger::error(errorMessage);
+            std::error_code ec;
+            std::filesystem::create_hard_link((winAppSDKFilesSrcDir + file).c_str(), (installationFolder + consumer + L"\\" + file).c_str(), ec);
+
+            if (ec.value() != S_OK)
+            {
+                std::wstring errorMessage{ L"Error creating hard link for: " };
+                errorMessage += file;
+                errorMessage += L", error code: " + std::to_wstring(ec.value());
+                Logger::error(errorMessage);
+            }
         }
     }
 
@@ -1085,12 +1042,27 @@ LExit:
     return WcaFinalize(er);
 }
 
+const std::wstring PTInteropConsumers[] =
+{
+    L"modules\\ColorPicker",
+    L"modules\\PowerOCR",
+    L"modules\\launcher",
+    L"modules\\FancyZones",
+    L"modules\\ImageResizer",
+    L"Settings",
+    L"modules\\Awake",
+    L"modules\\MeasureTool",
+    L"modules\\PowerAccent",
+    L"modules\\FileLocksmith",
+    L"modules\\Hosts",
+    L"modules\\FileExplorerPreview",
+};
+
 UINT __stdcall CreatePTInteropHardlinksCA(MSIHANDLE hInstall)
 {
     HRESULT hr = S_OK;
     UINT er = ERROR_SUCCESS;
-    std::wstring installationFolder, interopFilesSrcDir, colorPickerDir, powerOCRDir, launcherDir, fancyZonesDir,
-        imageResizerDir, settingsDir, awakeDir, measureToolDir, powerAccentDir, hostsFileEditorDir;
+    std::wstring installationFolder, interopFilesSrcDir;
 
     hr = WcaInitialize(hInstall, "CreatePTInteropHardlinksCA");
     ExitOnFailure(hr, "Failed to initialize");
@@ -1099,37 +1071,21 @@ UINT __stdcall CreatePTInteropHardlinksCA(MSIHANDLE hInstall)
     ExitOnFailure(hr, "Failed to get installation folder");
 
     interopFilesSrcDir = installationFolder + L"dll\\Interop\\";
-    colorPickerDir = installationFolder + L"modules\\ColorPicker\\";
-    powerOCRDir = installationFolder + L"modules\\PowerOCR\\";
-    launcherDir = installationFolder + L"modules\\launcher\\";
-    fancyZonesDir = installationFolder + L"modules\\FancyZones\\";
-    hostsFileEditorDir = installationFolder + L"modules\\Hosts\\";
-    imageResizerDir = installationFolder + L"modules\\ImageResizer\\";
-    settingsDir = installationFolder + L"Settings\\";
-    awakeDir = installationFolder + L"modules\\Awake\\";
-    measureToolDir = installationFolder + L"modules\\MeasureTool\\";
-    powerAccentDir = installationFolder + L"modules\\PowerAccent\\";
 
     for (auto file : powerToysInteropFiles)
     {    
-        std::error_code ec;
-        std::filesystem::create_hard_link((interopFilesSrcDir + file).c_str(), (colorPickerDir + file).c_str(), ec);
-        std::filesystem::create_hard_link((interopFilesSrcDir + file).c_str(), (powerOCRDir + file).c_str(), ec);
-        std::filesystem::create_hard_link((interopFilesSrcDir + file).c_str(), (launcherDir + file).c_str(), ec);
-        std::filesystem::create_hard_link((interopFilesSrcDir + file).c_str(), (fancyZonesDir + file).c_str(), ec);
-        std::filesystem::create_hard_link((interopFilesSrcDir + file).c_str(), (hostsFileEditorDir + file).c_str(), ec);
-        std::filesystem::create_hard_link((interopFilesSrcDir + file).c_str(), (imageResizerDir + file).c_str(), ec);
-        std::filesystem::create_hard_link((interopFilesSrcDir + file).c_str(), (settingsDir + file).c_str(), ec);
-        std::filesystem::create_hard_link((interopFilesSrcDir + file).c_str(), (awakeDir + file).c_str(), ec);
-        std::filesystem::create_hard_link((interopFilesSrcDir + file).c_str(), (measureToolDir + file).c_str(), ec);
-        std::filesystem::create_hard_link((interopFilesSrcDir + file).c_str(), (powerAccentDir + file).c_str(), ec);
-
-        if (ec.value() != S_OK)
+        for (auto consumer : PTInteropConsumers)
         {
-            std::wstring errorMessage{ L"Error creating hard link for: " };
-            errorMessage += file;
-            errorMessage += L", error code: " + std::to_wstring(ec.value());
-            Logger::error(errorMessage);
+            std::error_code ec;
+            std::filesystem::create_hard_link((interopFilesSrcDir + file).c_str(), (installationFolder + consumer + L"\\" + file).c_str(), ec);
+        
+            if (ec.value() != S_OK)
+            {
+                std::wstring errorMessage{ L"Error creating hard link for: " };
+                errorMessage += file;
+                errorMessage += L", error code: " + std::to_wstring(ec.value());
+                Logger::error(errorMessage);
+            }
         }
     }
 
@@ -1138,11 +1094,92 @@ LExit:
     return WcaFinalize(er);
 }
 
+UINT __stdcall CreateDotnetRuntimeHardlinksCA(MSIHANDLE hInstall)
+{
+    HRESULT hr = S_OK;
+    UINT er = ERROR_SUCCESS;
+    std::wstring installationFolder, dotnetRuntimeFilesSrcDir, colorPickerDir, powerOCRDir, launcherDir, fancyZonesDir,
+      imageResizerDir, settingsDir, awakeDir, measureToolDir, powerAccentDir, fileExplorerAddOnsDir, hostsDir, fileLocksmithDir;
+
+    hr = WcaInitialize(hInstall, "CreateDotnetRuntimeHardlinksCA");
+    ExitOnFailure(hr, "Failed to initialize");
+
+    hr = getInstallFolder(hInstall, installationFolder);
+    ExitOnFailure(hr, "Failed to get installation folder");
+
+    dotnetRuntimeFilesSrcDir = installationFolder + L"dll\\dotnet\\";
+    colorPickerDir = installationFolder + L"modules\\ColorPicker\\";
+    powerOCRDir = installationFolder + L"modules\\PowerOCR\\";
+    launcherDir = installationFolder + L"modules\\launcher\\";
+    fancyZonesDir = installationFolder + L"modules\\FancyZones\\";
+    imageResizerDir = installationFolder + L"modules\\ImageResizer\\";
+    settingsDir = installationFolder + L"Settings\\";
+    awakeDir = installationFolder + L"modules\\Awake\\";
+    measureToolDir = installationFolder + L"modules\\MeasureTool\\";
+    powerAccentDir = installationFolder + L"modules\\PowerAccent\\";
+    fileExplorerAddOnsDir = installationFolder + L"modules\\FileExplorerPreview\\";
+    hostsDir = installationFolder + L"modules\\Hosts\\";
+    fileLocksmithDir = installationFolder + L"modules\\FileLocksmith\\";
+
+    for (auto file : dotnetRuntimeFiles)
+    {
+        std::error_code ec;
+        std::filesystem::create_hard_link((dotnetRuntimeFilesSrcDir + file).c_str(), (colorPickerDir + file).c_str(), ec);
+        std::filesystem::create_hard_link((dotnetRuntimeFilesSrcDir + file).c_str(), (powerOCRDir + file).c_str(), ec);
+        std::filesystem::create_hard_link((dotnetRuntimeFilesSrcDir + file).c_str(), (launcherDir + file).c_str(), ec);
+        std::filesystem::create_hard_link((dotnetRuntimeFilesSrcDir + file).c_str(), (fancyZonesDir + file).c_str(), ec);
+        std::filesystem::create_hard_link((dotnetRuntimeFilesSrcDir + file).c_str(), (imageResizerDir + file).c_str(), ec);
+        std::filesystem::create_hard_link((dotnetRuntimeFilesSrcDir + file).c_str(), (settingsDir + file).c_str(), ec);
+        std::filesystem::create_hard_link((dotnetRuntimeFilesSrcDir + file).c_str(), (awakeDir + file).c_str(), ec);
+        std::filesystem::create_hard_link((dotnetRuntimeFilesSrcDir + file).c_str(), (measureToolDir + file).c_str(), ec);
+        std::filesystem::create_hard_link((dotnetRuntimeFilesSrcDir + file).c_str(), (powerAccentDir + file).c_str(), ec);
+        std::filesystem::create_hard_link((dotnetRuntimeFilesSrcDir + file).c_str(), (fileExplorerAddOnsDir + file).c_str(), ec);
+        std::filesystem::create_hard_link((dotnetRuntimeFilesSrcDir + file).c_str(), (hostsDir + file).c_str(), ec);
+        std::filesystem::create_hard_link((dotnetRuntimeFilesSrcDir + file).c_str(), (fileLocksmithDir + file).c_str(), ec);
+
+        if (ec.value() != S_OK)
+        {
+            std::wstring errorMessage{ L"Error creating hard link for: " };
+            errorMessage += file;
+            errorMessage += L", error code: " + std::to_wstring(ec.value());
+            Logger::error(errorMessage);
+            er = ERROR_INSTALL_FAILURE;
+        }
+    }
+
+    for (auto file : dotnetRuntimeWPFFiles)
+    {
+      std::error_code ec;
+      std::filesystem::create_hard_link((dotnetRuntimeFilesSrcDir + file).c_str(), (awakeDir + file).c_str(), ec);
+      std::filesystem::create_hard_link((dotnetRuntimeFilesSrcDir + file).c_str(), (colorPickerDir + file).c_str(), ec);
+      std::filesystem::create_hard_link((dotnetRuntimeFilesSrcDir + file).c_str(), (powerOCRDir + file).c_str(), ec);
+      std::filesystem::create_hard_link((dotnetRuntimeFilesSrcDir + file).c_str(), (launcherDir + file).c_str(), ec);
+      std::filesystem::create_hard_link((dotnetRuntimeFilesSrcDir + file).c_str(), (fancyZonesDir + file).c_str(), ec);
+      std::filesystem::create_hard_link((dotnetRuntimeFilesSrcDir + file).c_str(), (imageResizerDir + file).c_str(), ec);
+      std::filesystem::create_hard_link((dotnetRuntimeFilesSrcDir + file).c_str(), (powerAccentDir + file).c_str(), ec);
+      std::filesystem::create_hard_link((dotnetRuntimeFilesSrcDir + file).c_str(), (fileExplorerAddOnsDir + file).c_str(), ec);
+      std::filesystem::create_hard_link((dotnetRuntimeFilesSrcDir + file).c_str(), (hostsDir + file).c_str(), ec);
+
+      if (ec.value() != S_OK)
+      {
+        std::wstring errorMessage{ L"Error creating hard link for: " };
+        errorMessage += file;
+        errorMessage += L", error code: " + std::to_wstring(ec.value());
+        Logger::error(errorMessage);
+        er = ERROR_INSTALL_FAILURE;
+      }
+    }
+
+    LExit:
+    er = SUCCEEDED(hr) ? ERROR_SUCCESS : ERROR_INSTALL_FAILURE;
+    return WcaFinalize(er);
+}
+
 UINT __stdcall DeleteWinAppSDKHardlinksCA(MSIHANDLE hInstall)
 {
     HRESULT hr = S_OK;
     UINT er = ERROR_SUCCESS;
-    std::wstring installationFolder, settingsDir, powerRenameDir, measureToolDir, hostsFileEditorDir;
+    std::wstring installationFolder;
 
     hr = WcaInitialize(hInstall, "DeleteWinAppSDKHardlinksCA");
     ExitOnFailure(hr, "Failed to initialize");
@@ -1150,19 +1187,14 @@ UINT __stdcall DeleteWinAppSDKHardlinksCA(MSIHANDLE hInstall)
     hr = getInstallFolder(hInstall, installationFolder);
     ExitOnFailure(hr, "Failed to get installation folder");
 
-    hostsFileEditorDir = installationFolder + L"modules\\Hosts\\";
-    settingsDir = installationFolder + L"Settings\\";
-    powerRenameDir = installationFolder + L"modules\\PowerRename\\";
-    measureToolDir = installationFolder + L"modules\\MeasureTool\\";
-
     try
     {
         for (auto file : winAppSdkFiles)
         {
-            DeleteFile((hostsFileEditorDir + file).c_str());
-            DeleteFile((settingsDir + file).c_str());
-            DeleteFile((powerRenameDir + file).c_str());
-            DeleteFile((measureToolDir + file).c_str());
+            for (auto consumer : WinAppSDKConsumers)
+            {
+                DeleteFile((installationFolder + consumer + L"\\" + file).c_str());
+            }
         }
     }
     catch (std::exception e)
@@ -1183,10 +1215,47 @@ UINT __stdcall DeletePTInteropHardlinksCA(MSIHANDLE hInstall)
 {
     HRESULT hr = S_OK;
     UINT er = ERROR_SUCCESS;
-    std::wstring installationFolder, interopFilesSrcDir, colorPickerDir, powerOCRDir, launcherDir, fancyZonesDir,
-        imageResizerDir, settingsDir, awakeDir, measureToolDir, powerAccentDir, hostsFileEditorDir;
+    std::wstring installationFolder, interopFilesSrcDir;
 
     hr = WcaInitialize(hInstall, "DeletePTInteropHardlinksCA");
+    ExitOnFailure(hr, "Failed to initialize");
+
+    hr = getInstallFolder(hInstall, installationFolder);
+    ExitOnFailure(hr, "Failed to get installation folder");
+
+    try
+    {
+        for (auto file : powerToysInteropFiles)
+        {
+            for (auto consumer : PTInteropConsumers)
+            {
+                DeleteFile((installationFolder + consumer + L"\\" + file).c_str());
+            }
+        }
+    }
+    catch (std::exception e)
+    {
+        std::string errorMessage{ "Exception thrown while trying to delete PowerToys Interop and VC Redist hardlinks: " };
+        errorMessage += e.what();
+        Logger::error(errorMessage);
+
+        er = ERROR_INSTALL_FAILURE;
+    }
+
+LExit:
+    er = SUCCEEDED(hr) ? ERROR_SUCCESS : ERROR_INSTALL_FAILURE;
+    return WcaFinalize(er);
+}
+
+UINT __stdcall DeleteDotnetRuntimeHardlinksCA(MSIHANDLE hInstall)
+{
+    HRESULT hr = S_OK;
+    UINT er = ERROR_SUCCESS;
+    std::wstring installationFolder, colorPickerDir, powerOCRDir, launcherDir, fancyZonesDir,
+      imageResizerDir, settingsDir, awakeDir, measureToolDir, powerAccentDir, fileExplorerAddOnsDir,
+      hostsDir, fileLocksmithDir;
+
+    hr = WcaInitialize(hInstall, "DeleteDotnetRuntimeHardlinksCA");
     ExitOnFailure(hr, "Failed to initialize");
 
     hr = getInstallFolder(hInstall, installationFolder);
@@ -1196,32 +1265,49 @@ UINT __stdcall DeletePTInteropHardlinksCA(MSIHANDLE hInstall)
     powerOCRDir = installationFolder + L"modules\\PowerOCR\\";
     launcherDir = installationFolder + L"modules\\launcher\\";
     fancyZonesDir = installationFolder + L"modules\\FancyZones\\";
-    hostsFileEditorDir = installationFolder + L"modules\\Hosts\\";
     imageResizerDir = installationFolder + L"modules\\ImageResizer\\";
     settingsDir = installationFolder + L"Settings\\";
     awakeDir = installationFolder + L"modules\\Awake\\";
     measureToolDir = installationFolder + L"modules\\MeasureTool\\";
     powerAccentDir = installationFolder + L"modules\\PowerAccent\\";
+    fileExplorerAddOnsDir = installationFolder + L"modules\\FileExplorerPreview\\";
+    hostsDir = installationFolder + L"modules\\Hosts\\";
+    fileLocksmithDir = installationFolder + L"modules\\FileLocksmith\\";
 
     try
     {
-        for (auto file : powerToysInteropFiles)
+        for (auto file : dotnetRuntimeFiles)
         {
-            DeleteFile((colorPickerDir + file).c_str());
-            DeleteFile((powerOCRDir + file).c_str());
-            DeleteFile((launcherDir + file).c_str());
-            DeleteFile((fancyZonesDir + file).c_str());
-            DeleteFile((hostsFileEditorDir + file).c_str());
-            DeleteFile((imageResizerDir + file).c_str());
-            DeleteFile((settingsDir + file).c_str());
-            DeleteFile((awakeDir + file).c_str());
-            DeleteFile((measureToolDir + file).c_str());
-            DeleteFile((powerAccentDir + file).c_str());
+          DeleteFile((colorPickerDir + file).c_str());
+          DeleteFile((powerOCRDir + file).c_str());
+          DeleteFile((launcherDir + file).c_str());
+          DeleteFile((fancyZonesDir + file).c_str());
+          DeleteFile((imageResizerDir + file).c_str());
+          DeleteFile((settingsDir + file).c_str());
+          DeleteFile((awakeDir + file).c_str());
+          DeleteFile((measureToolDir + file).c_str());
+          DeleteFile((powerAccentDir + file).c_str());
+          DeleteFile((fileExplorerAddOnsDir + file).c_str());
+          DeleteFile((hostsDir + file).c_str());
+          DeleteFile((fileLocksmithDir + file).c_str());
+        }
+
+        for (auto file : dotnetRuntimeWPFFiles)
+        {
+          DeleteFile((awakeDir + file).c_str());
+          DeleteFile((colorPickerDir + file).c_str());
+          DeleteFile((powerOCRDir + file).c_str());
+          DeleteFile((launcherDir + file).c_str());
+          DeleteFile((fancyZonesDir + file).c_str());
+          DeleteFile((imageResizerDir + file).c_str());
+          DeleteFile((powerAccentDir + file).c_str());
+          DeleteFile((fileExplorerAddOnsDir + file).c_str());
+          DeleteFile((hostsDir + file).c_str());
         }
     }
     catch (std::exception e)
     {
-        std::string errorMessage{ "Exception thrown while trying to delete PowerToys Interop and VC Redist hardlinks: " };
+        std::string errorMessage{ "Exception thrown while trying to delete dotnet runtime hardlinks: " };
         errorMessage += e.what();
         Logger::error(errorMessage);
 
@@ -1256,6 +1342,7 @@ UINT __stdcall TerminateProcessesCA(MSIHANDLE hInstall)
         L"PowerToys.Awake.exe",
         L"PowerToys.FancyZones.exe",
         L"PowerToys.FancyZonesEditor.exe",
+        L"PowerToys.FileLocksmithUI.exe",
         L"PowerToys.ColorPickerUI.exe",
         L"PowerToys.AlwaysOnTop.exe",
         L"PowerToys.exe"
