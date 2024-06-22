@@ -58,11 +58,64 @@ namespace Microsoft.PowerToys.PreviewHandler.Monaco
         }
 
         /// <summary>
-        /// Max file size for displaying (in bytes).
+        /// Gets Max file size for displaying (in bytes).
         /// </summary>
-        private readonly long _maxFileSize = 50000;
+        public double MaxFileSize
+        {
+            get
+            {
+                try
+                {
+                    return moduleSettings.GetSettings<PowerPreviewSettings>(PowerPreviewSettings.ModuleName).Properties.MonacoPreviewMaxFileSize.Value * 1000;
+                }
+                catch (FileNotFoundException)
+                {
+                    // Couldn't read the settings.
+                    // Assume default of 50000.
+                    return 50000;
+                }
+            }
+        }
 
-        public long MaxFileSize => _maxFileSize;
+        /// <summary>
+        /// Gets the font size for the previewer. Set by PT settings.
+        /// </summary>
+        public double FontSize
+        {
+            get
+            {
+                try
+                {
+                    return moduleSettings.GetSettings<PowerPreviewSettings>(PowerPreviewSettings.ModuleName).Properties.MonacoPreviewFontSize.Value;
+                }
+                catch (FileNotFoundException)
+                {
+                    // Couldn't read the settings.
+                    // Assume default of 14.
+                    return 14;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether sticky scroll should be enabled. Set by PT settings.
+        /// </summary>
+        public bool StickyScroll
+        {
+            get
+            {
+                try
+                {
+                    return moduleSettings.GetSettings<PowerPreviewSettings>(PowerPreviewSettings.ModuleName).Properties.MonacoPreviewStickyScroll;
+                }
+                catch (FileNotFoundException)
+                {
+                    // Couldn't read the settings.
+                    // Assume default of true.
+                    return true;
+                }
+            }
+        }
 
         /// <summary>
         /// Gets the color of the window background.
@@ -73,7 +126,7 @@ namespace Microsoft.PowerToys.PreviewHandler.Monaco
             {
                 if (GetTheme() == "dark")
                 {
-                    return System.Drawing.ColorTranslator.FromHtml("#1e1e1e");
+                    return Color.FromArgb(30, 30, 30); // #1e1e1e
                 }
                 else
                 {

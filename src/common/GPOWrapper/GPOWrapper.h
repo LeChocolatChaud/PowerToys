@@ -9,12 +9,15 @@ namespace winrt::PowerToys::GPOWrapper::implementation
         GPOWrapper() = default;
         static GpoRuleConfigured GetConfiguredAlwaysOnTopEnabledValue();
         static GpoRuleConfigured GetConfiguredAwakeEnabledValue();
+        static GpoRuleConfigured GetConfiguredCmdNotFoundEnabledValue();
         static GpoRuleConfigured GetConfiguredColorPickerEnabledValue();
+        static GpoRuleConfigured GetConfiguredCropAndLockEnabledValue();
         static GpoRuleConfigured GetConfiguredFancyZonesEnabledValue();
         static GpoRuleConfigured GetConfiguredFileLocksmithEnabledValue();
         static GpoRuleConfigured GetConfiguredSvgPreviewEnabledValue();
         static GpoRuleConfigured GetConfiguredMarkdownPreviewEnabledValue();
         static GpoRuleConfigured GetConfiguredMonacoPreviewEnabledValue();
+        static GpoRuleConfigured GetConfiguredMouseWithoutBordersEnabledValue();
         static GpoRuleConfigured GetConfiguredPdfPreviewEnabledValue();
         static GpoRuleConfigured GetConfiguredGcodePreviewEnabledValue();
         static GpoRuleConfigured GetConfiguredSvgThumbnailsEnabledValue();
@@ -26,14 +29,27 @@ namespace winrt::PowerToys::GPOWrapper::implementation
         static GpoRuleConfigured GetConfiguredKeyboardManagerEnabledValue();
         static GpoRuleConfigured GetConfiguredFindMyMouseEnabledValue();
         static GpoRuleConfigured GetConfiguredMouseHighlighterEnabledValue();
+        static GpoRuleConfigured GetConfiguredMouseJumpEnabledValue();
         static GpoRuleConfigured GetConfiguredMousePointerCrosshairsEnabledValue();
         static GpoRuleConfigured GetConfiguredPowerRenameEnabledValue();
         static GpoRuleConfigured GetConfiguredPowerLauncherEnabledValue();
         static GpoRuleConfigured GetConfiguredQuickAccentEnabledValue();
+        static GpoRuleConfigured GetConfiguredRegistryPreviewEnabledValue();
         static GpoRuleConfigured GetConfiguredScreenRulerEnabledValue();
         static GpoRuleConfigured GetConfiguredShortcutGuideEnabledValue();
         static GpoRuleConfigured GetConfiguredTextExtractorEnabledValue();
+        static GpoRuleConfigured GetConfiguredAdvancedPasteEnabledValue();
         static GpoRuleConfigured GetConfiguredVideoConferenceMuteEnabledValue();
+        static GpoRuleConfigured GetConfiguredPeekEnabledValue();
+        static GpoRuleConfigured GetDisableNewUpdateToastValue();
+        static GpoRuleConfigured GetDisableAutomaticUpdateDownloadValue();
+        static GpoRuleConfigured GetDisableShowWhatsNewAfterUpdatesValue();
+        static GpoRuleConfigured GetAllowExperimentationValue();
+        static GpoRuleConfigured GetRunPluginEnabledValue(winrt::hstring const& pluginID);
+        static GpoRuleConfigured GetConfiguredEnvironmentVariablesEnabledValue();
+        static GpoRuleConfigured GetConfiguredQoiPreviewEnabledValue();
+        static GpoRuleConfigured GetConfiguredQoiThumbnailsEnabledValue();
+        static GpoRuleConfigured GetAllowedAdvancedPasteOnlineAIModelsValue();
     };
 }
 
